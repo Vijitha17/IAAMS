@@ -8,13 +8,14 @@ const {
   deleteDepartment
 } = require('../controllers/departmentController');
 const { protect } = require('../middleWare/authMiddleware');
-const { requireRole } = require('../middleWare/roleMiddleware');
+const { requireRole, requireAdminLevel } = require('../middleWare/roleMiddleware');
 
 // Create a department (Admin only)
 router.post(
   '/',
   protect,
-  requireRole(['institution_admin', 'college_admin']),
+  requireRole(['management_admin', 'principal']),
+  requireAdminLevel(['management', 'principal']),
   createDepartment
 );
 
@@ -28,15 +29,17 @@ router.get('/:id', protect, getDepartmentById);
 router.put(
   '/:id',
   protect,
-  requireRole(['institution_admin', 'college_admin']),
+  requireRole(['management_admin', 'principal']),
+  requireAdminLevel(['management', 'principal']),
   updateDepartment
 );
 
-// Delete a department (Admin only - Soft delete recommended)
+// Delete a department (Admin only)
 router.delete(
   '/:id',
   protect,
-  requireRole(['institution_admin', 'college_admin']),
+  requireRole(['management_admin']),
+  requireAdminLevel(['management']),
   deleteDepartment
 );
 

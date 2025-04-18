@@ -20,28 +20,76 @@ const requireRole = (requiredRoles) => {
   });
 };
 
-// Middleware to check scope (institution/college/department)
-const requireScope = (scopeLevel) => {
+// Middleware to check administrative level (management/principal/hod/department)
+const requireAdminLevel = (requiredLevels) => {
   return asyncHandler(async (req, res, next) => {
     const user = req.user;
     
-    if (scopeLevel === 'institution' && user.adminLevel !== 'institution') {
-      res.status(403);
-      throw new Error("Institution-level access required");
+    if (!user) {
+      res.status(401);
+      throw new Error("Not authorized");
     }
 
-    if (scopeLevel === 'college' && !['institution', 'college'].includes(user.adminLevel)) {
+    if (!requiredLevels.includes(user.adminLevel)) {
       res.status(403);
-      throw new Error("College-level access required");
-    }
-
-    if (scopeLevel === 'department' && user.adminLevel === 'none') {
-      res.status(403);
-      throw new Error("Department-level access required");
+      throw new Error("Access denied. Insufficient administrative permissions");
     }
 
     next();
   });
 };
 
-module.exports = { requireRole, requireScope };
+// Helper functions for common permission checks
+const canManageInventory = asyncHandler(async (req, res, next) => {
+  const user = req.user;
+  
+  if (user.role !== 'management_admin') {
+    res.status(403);
+    throw new Error("Only management admins can manage inventory");
+  }
+  
+  next();
+});
+
+const canApproveRequests = asyncHandler(async (req, res, next) => {
+  const user = req.user;
+  const validRoles = ['management_admin', 'principal', 'hod'];
+  
+  if (!validRoles.includes(user.role)) {
+    res.status(403);
+    throw new Error("You don't have permission to approve requests");
+  }
+  
+  next();
+});
+
+const canManageBudget = asyncHandler(async (req, res, next) => {
+  const user = req.user;
+  
+  if (user.role !== 'management_people') {
+    res.status(403);
+    throw new Error("Only management people can manage budgets");
+  }
+  
+  next();
+});
+
+const canInitiatePurchase = asyncHandler(async (req, res, next) => {
+  const user = req.user;
+  
+  if (user.role !== 'management_admin') {
+    res.status(403);
+    throw new Error("Only management admins can initiate purchases");
+  }
+  
+  next();
+});
+
+module.exports = { 
+  requireRole, 
+  requireAdminLevel,
+  canManageInventory,
+  canApproveRequests,
+  canManageBudget,
+  canInitiatePurchase
+};

@@ -17,10 +17,11 @@ const generateToken = (id) => {
 // 2. ROLE VALIDATION HELPERS
 // ======================
 function canCreateUser(creator, newUserRole) {
+  // Define role hierarchy and creation permissions
   const creationRules = {
-    institution_admin: ['college_admin', 'institution_top', 'institution_staff'],
-    college_admin: ['department_admin', 'college_top', 'college_staff'],
-    department_admin: ['department_top', 'department_staff']
+    management_admin: ['principal', 'hod', 'department_admin', 'management_people'],
+    principal: ['hod', 'department_admin'],
+    hod: ['department_admin']
   };
   
   // Check if creator has permission to create this role
@@ -32,7 +33,7 @@ function canCreateUser(creator, newUserRole) {
 }
 
 // ======================
-// 3. AUTHENTICATION (NEW WITH ROLES)
+// 3. AUTHENTICATION
 // ======================
 const registerUser = asyncHandler(async (req, res) => {
   try {
@@ -63,7 +64,7 @@ const registerUser = asyncHandler(async (req, res) => {
       });
     }
 
-    // Role validation
+    // Role validation - only management_admin, principal, and hod can create users
     if (role) {
       if (!creator) {
         return res.status(403).json({
@@ -82,11 +83,11 @@ const registerUser = asyncHandler(async (req, res) => {
     // Handle College Creation if needed
     let finalCollegeId = collegeId || (creator ? creator.collegeId : null);
     
-    if (role === 'college_admin' && !finalCollegeId) {
+    if ((role === 'principal' || role === 'hod') && !finalCollegeId) {
       if (!collegeName || !collegeCode) {
         return res.status(400).json({
           success: false,
-          message: "collegeName and collegeCode are required when creating college_admin without collegeId"
+          message: "collegeName and collegeCode are required when creating principal/hod without collegeId"
         });
       }
       
@@ -104,11 +105,14 @@ const registerUser = asyncHandler(async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // Default role to department_admin if not specified and not being created by admin
+    const userRole = role || 'department_admin';
+
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
-      role: role || 'department_staff',
+      role: userRole,
       collegeId: finalCollegeId,
       departmentId: finalDepartmentId,
       createdBy: creator?.id || null
@@ -132,6 +136,7 @@ const registerUser = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      adminLevel: user.adminLevel,
       collegeId: user.collegeId,
       departmentId: user.departmentId,
       photo: user.photo,
@@ -168,7 +173,7 @@ const loginUser = asyncHandler(async (req, res) => {
   // 2. Find user WITH password field
   const user = await User.scope('withPassword').findOne({ 
     where: { email },
-    attributes: ['id', 'name', 'email', 'role', 'password']  
+    attributes: ['id', 'name', 'email', 'role', 'adminLevel', 'password', 'collegeId', 'departmentId', 'photo', 'phone', 'bio']  
   });
 
   // 3. Check if user exists
@@ -177,7 +182,6 @@ const loginUser = asyncHandler(async (req, res) => {
       success: false, message: "User not found" 
     });
   }
-  
   
   // 4. Compare passwords
   const passwordIsCorrect = await bcrypt.compare(password, user.password);
@@ -191,7 +195,6 @@ const loginUser = asyncHandler(async (req, res) => {
 
   const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
     expiresIn: "1d",
-    
   });
 
   res.cookie("token", token, {
@@ -207,6 +210,7 @@ const loginUser = asyncHandler(async (req, res) => {
     name: user.name,
     email: user.email,
     role: user.role,
+    adminLevel: user.adminLevel,
     collegeId: user.collegeId,
     departmentId: user.departmentId,
     photo: user.photo,
@@ -228,10 +232,10 @@ const logout = asyncHandler(async (req, res) => {
 });
 
 // ======================
-// 4. PASSWORD MANAGEMENT (YOUR EXISTING CODE - START)
+// 4. PASSWORD MANAGEMENT
 // ======================
 const changePassword = asyncHandler(async (req, res) => {
-  const user = await User.findByPk(req.user.id);
+  const user = await User.scope('withPassword').findByPk(req.user.id);
   const { oldPassword, password } = req.body;
 
   if (!user) {
@@ -335,9 +339,6 @@ const resetPassword = asyncHandler(async (req, res) => {
     message: "Password Reset Successful, Please Login",
   });
 });
-// ======================
-// PASSWORD MANAGEMENT (YOUR EXISTING CODE - END)
-// ======================
 
 // ======================
 // 5. USER PROFILE MANAGEMENT
@@ -357,6 +358,7 @@ const getUser = asyncHandler(async (req, res) => {
     name: user.name,
     email: user.email,
     role: user.role,
+    adminLevel: user.adminLevel,
     collegeId: user.collegeId,
     departmentId: user.departmentId,
     photo: user.photo,
@@ -415,6 +417,7 @@ const updateUser = asyncHandler(async (req, res) => {
     name: user.name,
     email: user.email,
     role: user.role,
+    adminLevel: user.adminLevel,
     collegeId: user.collegeId,
     departmentId: user.departmentId,
     photo: user.photo,
@@ -423,10 +426,13 @@ const updateUser = asyncHandler(async (req, res) => {
   });
 });
 
-const getInstitutionUsers = asyncHandler(async (req, res) => {
+// ======================
+// 6. USER LISTING BY ROLE/LEVEL
+// ======================
+const getManagementUsers = asyncHandler(async (req, res) => {
   const users = await User.findAll({
     where: { 
-      // Filter conditions for institution users
+      adminLevel: 'management'
     },
     attributes: { exclude: ['password'] }
   });
@@ -436,7 +442,8 @@ const getInstitutionUsers = asyncHandler(async (req, res) => {
 const getCollegeUsers = asyncHandler(async (req, res) => {
   const users = await User.findAll({
     where: { 
-      collegeId: req.user.collegeId
+      collegeId: req.user.collegeId,
+      adminLevel: ['principal', 'hod', 'department']
     },
     attributes: { exclude: ['password'] }
   });
@@ -446,13 +453,48 @@ const getCollegeUsers = asyncHandler(async (req, res) => {
 const getDepartmentUsers = asyncHandler(async (req, res) => {
   const users = await User.findAll({
     where: { 
-      departmentId: req.user.departmentId
+      departmentId: req.user.departmentId,
+      adminLevel: 'department'
     },
     attributes: { exclude: ['password'] }
   });
   res.status(200).json(users);
 });
 
+// ======================
+// 7. ALL USERS LIST
+// ======================
+const getAllUsers = asyncHandler(async (req, res) => {
+    try {
+      const users = await User.findAll({
+        attributes: { exclude: ['password'] },
+        include: [
+          { 
+            model: College, 
+            as: 'college',
+            attributes: ['id', 'name', 'code'] 
+          },
+          { 
+            model: Department, 
+            as: 'department',
+            attributes: ['id', 'name', 'code'] 
+          }
+        ]
+      });
+      
+      res.status(200).json({
+        success: true,
+        data: users
+      });
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch users",
+        error: error.message
+      });
+    }
+  });
 
 module.exports = {
   registerUser,
@@ -464,7 +506,8 @@ module.exports = {
   changePassword,
   forgotPassword,
   resetPassword,
-  getInstitutionUsers,
+  getManagementUsers,
   getCollegeUsers,
-  getDepartmentUsers
+  getDepartmentUsers,
+  getAllUsers
 };

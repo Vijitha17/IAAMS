@@ -1,9 +1,11 @@
 const express = require("express");
+const cors = require("cors");
 const dotenv = require("dotenv").config();
 const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 
 const { sequelize } = require("./models"); // ✅ only use this Sequelize instance
+const db = require("./config/database");
 
 const userRoute = require("./routes/userRoute");
 const collegeRoute = require("./routes/collegeRoute");
@@ -12,6 +14,13 @@ const errorHandler = require("./middleWare/errorMiddleware");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+app.use(cors({
+    origin: 'http://localhost:5173', 
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // Middleware
 app.use(bodyParser.json());

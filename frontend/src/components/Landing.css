@@ -1,0 +1,82 @@
+.landing-page {
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #fef9c3; /* Light yellow background */
+    padding: 0;
+    margin: 0;
+  }
+  
+  .landing-container {
+    display: flex;
+    width: 100%;
+    height: 100vh;
+    background-color:rgb(255, 255, 255); /* Slightly different yellow tone for container */
+    justify-content: space-between; /* Ensures image and text are spread out */
+    align-items: center; /* Vertically centers the content */
+    padding: 0 2rem; /* Adds some padding for spacing */
+    box-sizing: border-box; /* Ensure padding doesn't affect width */
+    overflow: hidden;
+  }
+  
+  .image-section {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+  }
+  
+  .landing-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: cover; /* Ensure the image covers the section neatly */
+  }
+  
+  .text-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column; /* Stack the lines vertically */
+    justify-content: center;
+    align-items: flex-start; /* Align text to the left */
+    padding: 2rem;
+  }
+  
+  .landing-title {
+    font-size: 2.8rem; /* Adjusted for better proportion */
+    color: #333333; /* Dark gray for readability */
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1); /* Subtle text shadow */
+  }
+  
+  .landing-subtext {
+    font-size: 1.4rem; /* Adjusted for better proportion */
+    color: #333333; /* Dark gray for readability */
+    margin-top: 0.5rem;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1); /* Subtle text shadow */
+  }
+  
+  .login-button {
+    background-color:  #f8b500; /* Soft green for the button */
+    color: white;
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-top: 1.5rem; /* Adds some space above the button */
+  }
+  
+  .login-button:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+  
+  .login-button:focus,
+  .login-button:focus-visible {
+    outline: 4px auto #66ff66; /* Subtle green focus outline for accessibility */
+  }
+  

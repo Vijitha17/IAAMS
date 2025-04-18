@@ -1,4 +1,3 @@
-// routes/collegeRoute.js
 const express = require('express');
 const router = express.Router();
 const {
@@ -9,13 +8,14 @@ const {
   deleteCollege
 } = require('../controllers/collegeController');
 const { protect } = require('../middleWare/authMiddleware');
-const { requireRole } = require('../middleWare/roleMiddleware');
+const { requireRole, requireAdminLevel } = require('../middleWare/roleMiddleware');
 
-// Create a college (Institution Admin only)
+// Create a college (Management Admin only)
 router.post(
   '/',
   protect,
-  requireRole(['institution_admin']),
+  requireRole(['management_admin']),
+  requireAdminLevel(['management']),
   createCollege
 );
 
@@ -25,19 +25,21 @@ router.get('/', protect, getColleges);
 // Get single college by ID (Protected)
 router.get('/:id', protect, getCollegeById);
 
-// Update a college (Institution Admin only)
+// Update a college (Management Admin only)
 router.put(
   '/:id',
   protect,
-  requireRole(['institution_admin']),
+  requireRole(['management_admin']),
+  requireAdminLevel(['management']),
   updateCollege
 );
 
-// Delete a college (Institution Admin only - Soft delete recommended)
+// Delete a college (Management Admin only)
 router.delete(
   '/:id',
   protect,
-  requireRole(['institution_admin']),
+  requireRole(['management_admin']),
+  requireAdminLevel(['management']),
   deleteCollege
 );
 

@@ -7,12 +7,17 @@ const {
   getUser,
   updateUser,
   changePassword,
-  getInstitutionUsers,    
-  getCollegeUsers,      
-  getDepartmentUsers 
+  getManagementUsers,
+  getCollegeUsers,
+  getDepartmentUsers,
+  getAllUsers
 } = require("../controllers/userController");
 const { protect } = require("../middleWare/authMiddleware");
-const { requireRole, requireScope } = require("../middleWare/roleMiddleware");
+const { 
+  requireRole, 
+  requireAdminLevel, 
+  canManageInventory 
+} = require("../middleWare/roleMiddleware");
 
 // Public routes
 router.post("/login", loginUser);
@@ -25,31 +30,37 @@ router.get("/me", getUser);
 router.put("/me", updateUser);
 router.patch("/password", changePassword);
 
-// Admin-only routes
-router.post("/registerusers", 
+// User registration - role-based access
+router.post("/register", 
   protect,
-  requireRole(['institution_admin', 'college_admin', 'department_admin']), 
+  requireRole(['management_admin', 'principal', 'hod']), 
   registerUser
 );
 
-// Institution admin only
-router.get("/institution/getusers", 
-  requireRole(['institution_admin']), 
-  requireScope('institution'),
-  getInstitutionUsers
+
+router.get("/", 
+    requireRole(['management_admin', 'principal', 'hod', 'department_admin']), 
+    getAllUsers
 );
 
-// College admin only
-router.get("/college/getusers", 
-  requireRole(['college_admin']), 
-  requireScope('college'),
+// Management admin only
+router.get("/management/users", 
+  requireRole(['management_admin', 'management_people']), 
+  requireAdminLevel(['management']),
+  getManagementUsers
+);
+
+// Principal/College admin only
+router.get("/college/users", 
+  requireRole(['principal', 'hod']), 
+  requireAdminLevel(['principal', 'hod']),
   getCollegeUsers
 );
 
 // Department admin only
-router.get("/department/getusers", 
+router.get("/department/users", 
   requireRole(['department_admin']), 
-  requireScope('department'),
+  requireAdminLevel(['department']),
   getDepartmentUsers
 );
 
